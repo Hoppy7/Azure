@@ -61,7 +61,7 @@ function Get-OMSQueryResults {
             client_id     = $spnAppId;
             client_secret = $spnKey;
         }
-        $oauthResponse = Invoke-WebRequest -Method Post -Uri $oauthUrl -Body $oauthBody;
+        $oauthResponse = Invoke-WebRequest -UseBasicParsing -Method Post -Uri $oauthUrl -Body $oauthBody;
         
         if ($oauthResponse.StatusCode -eq 200)
         {
@@ -185,7 +185,8 @@ function Insert-OmsData {
                 [OperationName]
                ,[ResourceId]
                ,[TimeGenerated]
-               ,[Caller])
+               ,[Caller]
+               )
         VALUES
                (
                 '$($row[0])'
