@@ -1,1 +1,1 @@
-Azure PowerShell
+Azure PowerShell & CLI
