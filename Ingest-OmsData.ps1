@@ -4,28 +4,28 @@
 [CmdletBinding()]
 param (
     [Parameter(mandatory=$true)]
-    $tenantId,
+    [string]$tenantId,
 
     [Parameter(mandatory=$true)]
-    $subscriptionId,
+    [string]$subscriptionId,
 
     [Parameter(mandatory=$true)]
-    $spnAppId,
+    [string]$spnAppId,
 
     [Parameter(mandatory=$true)]
-    $spnKey,
+    [string]$spnKey,
 
     [Parameter(mandatory=$true)]
-    $workspaceId,
+    [string]$workspaceId,
 
     [Parameter(mandatory=$true)]
-    $kustoQuery,
+    [string]$kustoQuery,
 
     [Parameter(mandatory=$true)]
-    $sqlConnectionString,
+    [string]$sqlConnectionString,
 
     [Parameter(mandatory=$true)]
-    $sqlTable
+    [string]$sqlTable
 )
 
 function Get-OMSQueryResults {
@@ -164,7 +164,7 @@ function Get-OMSQueryResults {
     }
 }
 
-function Insert-OmsData {
+function Insert-OMSData {
 
     [CmdletBinding()]
     param (
@@ -212,4 +212,4 @@ Import-Module -Name SqlServer -Force;
 
 $queryResults = Get-OMSQueryResults -tenantId $tenantId -subscriptionId $subscriptionId -spnAppId $spnAppId -spnKey $spnKey -workspaceId $workspaceId -kustoQuery $kustoQuery;
 
-Insert-OmsData -omsData $queryResults -sqlConnectionString $sqlConnectionString -sqlTable $sqlTable;
+Insert-OMSData -omsData $queryResults -sqlConnectionString $sqlConnectionString -sqlTable $sqlTable;
