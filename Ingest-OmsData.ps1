@@ -178,7 +178,8 @@ function Insert-OmsData {
         [string]$sqlTable
     )
 
-    foreach ($row in $omsData.tables.rows) {
+    foreach ($row in $omsData.tables.rows)
+    {
         $insert = @"
         INSERT INTO [dbo].[$sqlTable]
                (
