@@ -7,9 +7,6 @@ param (
     [string]$tenantId,
 
     [Parameter(mandatory=$true)]
-    [string]$subscriptionId,
-
-    [Parameter(mandatory=$true)]
     [string]$spnAppId,
 
     [Parameter(mandatory=$true)]
@@ -36,9 +33,6 @@ function Get-OMSQueryResults {
         [string]$tenantId,
 
         [Parameter(mandatory=$true)]
-        [string]$subscriptionId,
-
-        [Parameter(mandatory=$true)]
         [string]$spnAppId,
 
         [Parameter(mandatory=$true)]
@@ -54,13 +48,13 @@ function Get-OMSQueryResults {
     try 
     {
         # get oauth token
-        $oauthUrl = "https://login.microsoftonline.com/$TenantId/oauth2/token";
+        $oauthUrl = "https://login.microsoftonline.com/$tenantId/oauth2/token";
         $oauthBody = @{
             grant_type    = "client_credentials";
             resource      = "https://api.loganalytics.io";
             client_id     = $spnAppId;
             client_secret = $spnKey;
-        }
+        };
         $oauthResponse = Invoke-WebRequest -UseBasicParsing -Method Post -Uri $oauthUrl -Body $oauthBody;
         
         if ($oauthResponse.StatusCode -eq 200)
@@ -210,6 +204,6 @@ function Insert-OMSData {
 
 Import-Module -Name SqlServer -Force;
 
-$queryResults = Get-OMSQueryResults -tenantId $tenantId -subscriptionId $subscriptionId -spnAppId $spnAppId -spnKey $spnKey -workspaceId $workspaceId -kustoQuery $kustoQuery;
+$queryResults = Get-OMSQueryResults -tenantId $tenantId -spnAppId $spnAppId -spnKey $spnKey -workspaceId $workspaceId -kustoQuery $kustoQuery;
 
 Insert-OMSData -omsData $queryResults -sqlConnectionString $sqlConnectionString -sqlTable $sqlTable;
