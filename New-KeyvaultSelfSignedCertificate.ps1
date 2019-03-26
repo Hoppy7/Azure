@@ -1,3 +1,6 @@
+#Requires -Version 5.1
+#Requires -Modules Az
+#Requires -RunAsAdministrator
 
 [CmdletBinding()]
 param (
@@ -52,6 +55,7 @@ function Parse-ResourceId {
 
 }
 
+Import-Module Az -Force;
 
 # create certificate
 try
