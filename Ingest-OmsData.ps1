@@ -99,7 +99,8 @@ function Get-OMSQueryResults {
         {
             $response = $queryResponse.Content | ConvertFrom-Json;
         }
-        elseif ($queryResponse.StatusCode -eq 204) {
+        elseif ($queryResponse.StatusCode -eq 204)
+        {
             Write-Warning "The workspace being queried has not yet been enabled for Analytics queries and populated with data";
             break;
         }
