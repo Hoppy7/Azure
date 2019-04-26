@@ -84,6 +84,10 @@ function Get-OMSQueryResults
         {
             throw "500 - Internal server error.  $($_.Exception)";
         }
+        else
+        {
+            throw $_.Exception;
+        }
     }
 
     try 
