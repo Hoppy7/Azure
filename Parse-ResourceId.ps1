@@ -4,8 +4,7 @@
 param (
     [Parameter(
         valueFromPipeline = $true,
-        mandatory = $true,
-        position = 0
+        mandatory = $true
     )]
     [ValidatePattern("(/\w+/)([a-zA-Z0-9]{8}-([a-zA-Z0-9]{4}-){3}[a-zA-Z0-9]{12})(/\w+/)([a-zA-Z0-9-_]+)(/\w+/)([a-zA-Z.)([/\w+/)([a-zA-Z0-9-]+)")]
     [string]$resourceId
@@ -33,27 +32,30 @@ function Parse-ResourceId([string]$resourceId)
 
         # recurse child resources
         $childResources = $resourceid.Substring($resourceid.IndexOf($resourceValue)).Replace("$resourceValue/", "");
-        do 
+        if ([regex]::Match($childResources, "/").success -eq $true)
         {
-            $match = [regex]::Match($childResources, "/");
-
-            $childResourceProvider = [regex]::Match($childResources, "([a-zA-Z-]+)/").value;
-            $childResourceProviderValue = $childResources.Replace($childResourceProvider, "");
-            $childresources = $childResourceProviderValue.Substring($childResourceProviderValue.IndexOf("/") + 1);
-
-            if ([regex]::Match($childResourceProviderValue, "/").success -eq $true)
+            do 
             {
-                $childResourceProviderValue = $childResourceProviderValue.Substring(0, $childResourceProviderValue.IndexOf("/"));
+                $match = [regex]::Match($childResources, "/");
+    
+                $childResourceProvider = [regex]::Match($childResources, "([a-zA-Z-]+)/").value;
+                $childResourceProviderValue = $childResources.Replace($childResourceProvider, "");
+                $childresources = $childResourceProviderValue.Substring($childResourceProviderValue.IndexOf("/") + 1);
+    
+                if ([regex]::Match($childResourceProviderValue, "/").success -eq $true)
+                {
+                    $childResourceProviderValue = $childResourceProviderValue.Substring(0, $childResourceProviderValue.IndexOf("/"));
+                }
+    
+                $resourceHash.Add($childResourceProvider.replace("/", ""), $childResourceProviderValue);
+    
+                if ([regex]::Match($childResources, "/").success -eq $false)
+                {
+                    break;
+                }
             }
-
-            $resourceHash.Add($childResourceProvider.replace("/", ""), $childResourceProviderValue);
-
-            if ([regex]::Match($childResources, "/").success -eq $false)
-            {
-                break;
-            }
+            while ($match.success -eq $true)
         }
-        while ($match.success -eq $true)
     }
     catch [exception]
     {
