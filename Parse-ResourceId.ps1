@@ -1,6 +1,9 @@
 [CmdletBinding()]
 param (
-    [Parameter(mandatory = $true)]
+    [Parameter(
+        mandatory = $true,
+        ValueFromPipeline = $true        
+    )]
     [string]$resourceId
 )
 
