@@ -1,4 +1,4 @@
-#Requires -Version 5.1
+#Requires -Version 6.2
 #Requires -Modules SqlServer
 
 [CmdletBinding()]
@@ -25,8 +25,8 @@ param (
     [string]$sqlTable
 )
 
-function Get-OMSQueryResults {
-
+function Get-OMSQueryResults
+{
     [CmdletBinding()]
     param (
         [Parameter(mandatory=$true)]
@@ -68,21 +68,21 @@ function Get-OMSQueryResults {
     }
     catch [exception]
     {
-        if ([regex]::Match($_.Exception, [System.Net.HttpStatusCode]::BadRequest.value__).value -eq 400)
+        if ([regex]::Match($_.Exception, [System.Net.HttpStatusCode]::BadRequest.value__).success -eq $true)
         {
-            throw "Bad request.  $($_.Exception)";
+            throw "400 - Bad request.  $($_.Exception)";
         }
-        elseif ([regex]::Match($_.Exception, [System.Net.HttpStatusCode]::Unauthorized.value__).value -eq 401)
+        elseif ([regex]::Match($_.Exception, [System.Net.HttpStatusCode]::Unauthorized.value__).success -eq $true)
         {
-            throw "Authentication failed.  Check the SPN appId and key passed in the `$spnAppId & `$spnKey variables.  $($_.Exception)";
+            throw "401 - Authentication failed.  Check the SPN appId and key passed in the `$spnAppId & `$spnKey variables.  $($_.Exception)";
         }
-        elseif ([regex]::Match($_.Exception, [System.Net.HttpStatusCode]::Forbidden.value__).value -eq 403)
+        elseif ([regex]::Match($_.Exception, [System.Net.HttpStatusCode]::Forbidden.value__).success -eq $true)
         {
-            throw "Authorization failed. Check the SPN has sufficient permissions to the Log Analytics workspace.  $($_.Exception)";
+            throw "403 - Authorization failed. Check the SPN has sufficient permissions to the Log Analytics workspace.  $($_.Exception)";
         }
-        elseif ([regex]::Match($_.Exception, [System.Net.HttpStatusCode]::InternalServerError.value__).value -eq 500)
+        elseif ([regex]::Match($_.Exception, [System.Net.HttpStatusCode]::InternalServerError.value__).success -eq $true)
         {
-            throw "Internal server error.  $($_.Exception)";
+            throw "500 - Internal server error.  $($_.Exception)";
         }
     }
 
@@ -107,41 +107,41 @@ function Get-OMSQueryResults {
     }
     catch [exception]
     {
-        if ([regex]::Match($_.Exception, [System.Net.HttpStatusCode]::BadRequest.value__).value -eq 400)
+        if ([regex]::Match($_.Exception, [System.Net.HttpStatusCode]::BadRequest.value__).success -eq $true)
         {
-            throw "Bad request.  $($_.Exception)";
+            throw "400 - Bad request.  $($_.Exception)";
         }
-        elseif ([regex]::Match($_.Exception, [System.Net.HttpStatusCode]::Unauthorized.value__).value -eq 401)
+        elseif ([regex]::Match($_.Exception, [System.Net.HttpStatusCode]::Unauthorized.value__).success -eq $true)
         {
-            throw "Authentication failed.  Check the values set as the `$spnAppId & `$spnKey variables.  $($_.Exception)";
+            throw "401 - Authentication failed.  Check the values set as the `$spnAppId & `$spnKey variables.  $($_.Exception)";
         }
-        elseif ([regex]::Match($_.Exception, [System.Net.HttpStatusCode]::Forbidden.value__).value -eq 403)
+        elseif ([regex]::Match($_.Exception, [System.Net.HttpStatusCode]::Forbidden.value__).success -eq $true)
         {
-            throw "Authorization failed. Check the SPN has sufficient permissions to the Log Analytics workspace.  $($_.Exception)";
+            throw "403 - Authorization failed. Check the SPN has sufficient permissions to the Log Analytics workspace.  $($_.Exception)";
         }
-        elseif ([regex]::Match($_.Exception, [System.Net.HttpStatusCode]::NotFound.value__).value -eq 404)
+        elseif ([regex]::Match($_.Exception, [System.Net.HttpStatusCode]::NotFound.value__).success -eq $true)
         {
-            throw "The Log Analytics workspaceId is invalid.  $($_.Exception)";
+            throw "404 - The Log Analytics workspaceId is invalid.  $($_.Exception)";
         }
-        elseif ([regex]::Match($_.Exception, [System.Net.HttpStatusCode]::TooManyRequests.value__).value -eq 429)
+        elseif ([regex]::Match($_.Exception, [System.Net.HttpStatusCode]::TooManyRequests.value__).success -eq $true)
         {
-            throw "Too many requests.  $($_.Exception)";
+            throw "429 - Throttled.  Too many requests.  $($_.Exception)";
         }
-        elseif ([regex]::Match($_.Exception, [System.Net.HttpStatusCode]::InternalServerError.value__).value -eq 500)
+        elseif ([regex]::Match($_.Exception, [System.Net.HttpStatusCode]::InternalServerError.value__).success -eq $true)
         {
-            throw "Internal server error.  $($_.Exception)";
+            throw "500 - Internal server error.  $($_.Exception)";
         }
-        elseif ([regex]::Match($_.Exception, [System.Net.HttpStatusCode]::BadGateway.value__).value -eq 502)
+        elseif ([regex]::Match($_.Exception, [System.Net.HttpStatusCode]::BadGateway.value__).success -eq $true)
         {
-            throw "Bad gateway.  $($_.Exception)";
+            throw "502 - Bad gateway.  $($_.Exception)";
         }
-        elseif ([regex]::Match($_.Exception, [System.Net.HttpStatusCode]::ServiceUnavailable.value__).value -eq 503)
+        elseif ([regex]::Match($_.Exception, [System.Net.HttpStatusCode]::ServiceUnavailable.value__).success -eq $true)
         {
-            throw "Service unavailable.  $($_.Exception)";
+            throw "503 - Service unavailable.  $($_.Exception)";
         }
-        elseif ([regex]::Match($_.Exception, [System.Net.HttpStatusCode]::GatewayTimeout.value__).value -eq 504)
+        elseif ([regex]::Match($_.Exception, [System.Net.HttpStatusCode]::GatewayTimeout.value__).success -eq $true)
         {
-            throw "Gateway timeout.  $($_.Exception)";
+            throw "504 - Gateway timeout.  $($_.Exception)";
         }
         else
         {
@@ -159,8 +159,8 @@ function Get-OMSQueryResults {
     }
 }
 
-function Insert-OMSData {
-
+function Insert-OMSData
+{
     [CmdletBinding()]
     param (
         [Parameter(mandatory=$true)]
@@ -176,21 +176,21 @@ function Insert-OMSData {
     foreach ($row in $omsData.tables.rows)
     {
         $insert = @"
-        INSERT INTO [dbo].[$sqlTable]
-               (
+            INSERT INTO [dbo].[$sqlTable]
+                (
                 [OperationName]
-               ,[ResourceId]
-               ,[TimeGenerated]
-               ,[Caller]
-               )
-        VALUES
-               (
+                ,[ResourceId]
+                ,[TimeGenerated]
+                ,[Caller]
+                )
+            VALUES
+                (
                 '$($row[0])'
-               ,'$($row[1])'
-               ,'$($row[2])'
-               ,'$($row[3])'
-               )
-        GO
+                ,'$($row[1])'
+                ,'$($row[2])'
+                ,'$($row[3])'
+                )
+            GO
 "@;
         try
         {
@@ -206,5 +206,4 @@ function Insert-OMSData {
 Import-Module -Name SqlServer -Force;
 
 $queryResults = Get-OMSQueryResults -tenantId $tenantId -spnAppId $spnAppId -spnKey $spnKey -workspaceId $workspaceId -kustoQuery $kustoQuery;
-
 Insert-OMSData -omsData $queryResults -sqlConnectionString $sqlConnectionString -sqlTable $sqlTable;
