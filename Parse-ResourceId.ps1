@@ -1,4 +1,6 @@
+#Requires -PSEdition Desktop
 #Requires -Version 5.1
+
 
 [CmdletBinding()]
 param (
