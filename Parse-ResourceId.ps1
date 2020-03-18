@@ -1,34 +1,31 @@
-#Requires -PSEdition Desktop
-#Requires -Version 5.1
-
-
-[CmdletBinding()]
-param (
-    [Parameter(
-        valueFromPipeline = $true,
-        mandatory = $true
-    )]
-    [ValidatePattern("(/\w+/)([a-zA-Z0-9]{8}-([a-zA-Z0-9]{4}-){3}[a-zA-Z0-9]{12})(/\w+/)([a-zA-Z0-9-_]+)(/\w+/)([a-zA-Z.)([/\w+/)([a-zA-Z0-9-]+)")]
-    [string]$resourceId
-)
-
-function Parse-ResourceId([string]$resourceId) 
+function Parse-ResourceId
 {
+    [CmdletBinding()]
+    param
+    (
+        [Parameter(valueFromPipeline = $true, mandatory = $true)]
+        [ValidatePattern("(/\w+/)([a-fA-F\d]{8}-([a-fA-F\d]{4}-){3}[a-fA-F\d]{12})(/\w+/)([\d\w-_]+)(/\w+/)([\w+.]+)([/\w+/)([\d\w-_]+)")]
+        [string]$resourceId
+    )
+
     try
     {
+        $resourceId = $resourceId.ToLower();
         $resourceHash = @{};
 
         # subscriptionId
-        $subscriptionId = [regex]::Match($resourceId, "[a-zA-Z0-9]{8}-([a-zA-Z0-9]{4}-){3}[a-zA-Z0-9]{12}").value;
+        $subscriptionId = [regex]::Match($resourceId, "[a-fA-F\d]{8}-([a-fA-F\d]{4}-){3}[a-fA-F\d]{12}").value;
         $resourceHash.Add("subscriptionId", $subscriptionId);
 
-        # resourceGroup
-        $resourceGroup = [regex]::Match($resourceId, "resourceGroups/([a-zA-Z0-9-_]+)").value.replace("resourceGroups/", "");
+        # resource group
+        $resourceGroup = [regex]::Match($resourceId, "resourcegroups/([\d\w-_]+)").value.replace("resourcegroups/", "");
         $resourceHash.Add("resourceGroup", $resourceGroup);
 
         # parent resource
-        $resourceValue = [regex]::Match($resourceid, "providers/([a-zA-Z.]+)(/\w+/)([a-zA-Z0-9-_]+)").value -replace "providers/([a-zA-Z.]+)(/\w+/)";
-        $resourceProvider = [regex]::Match($resourceid, "providers/([a-zA-Z.]+)(/\w+/)([a-zA-Z0-9-_]+)").value -replace "providers/([a-zA-Z.]+)/";
+        $resourceValue = [regex]::Match($resourceid, "providers/([\w+.]+)(/\w+/)([\w-_]+)").value;
+        $resourceValue = [regex]::Replace($resourceValue, "providers/([\w+.]+)(/\w+/)", "");
+        $resourceProvider = [regex]::Match($resourceid, "providers/([\w+.]+)(/\w+/)([\w-_]+)").value;
+        $resourceProvider = [regex]::Replace($resourceProvider, "providers/([\w+.]+)/", "");
         $resourceProvider = $resourceProvider.Substring(0, $resourceProvider.IndexOf("/"));
         $resourceHash.Add($resourceProvider, $resourceValue);
 
@@ -40,7 +37,7 @@ function Parse-ResourceId([string]$resourceId)
             {
                 $match = [regex]::Match($childResources, "/");
     
-                $childResourceProvider = [regex]::Match($childResources, "([a-zA-Z-]+)/").value;
+                $childResourceProvider = [regex]::Match($childResources, "([\w+-]+)/").value;
                 $childResourceProviderValue = $childResources.Replace($childResourceProvider, "");
                 $childresources = $childResourceProviderValue.Substring($childResourceProviderValue.IndexOf("/") + 1);
     
@@ -61,10 +58,8 @@ function Parse-ResourceId([string]$resourceId)
     }
     catch [exception]
     {
-        throw "Error parsing the resourceId! $($_.exception)";
+        Write-Error -Message "Error parsing the resourceId! $($_.exception)";
     }
 
     return $resourceHash;
 }
-
-Parse-ResourceId($resourceId);
