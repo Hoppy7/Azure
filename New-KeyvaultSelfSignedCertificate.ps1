@@ -5,94 +5,133 @@
 [CmdletBinding()]
 param (
     [Parameter(mandatory=$true)]
-    [string[]]$subjectNames,
+    [string]$subjectNames,
 
     [Parameter(mandatory=$true)]
-    [securestring]$pfxPassword,
-
-    [Parameter(mandatory=$false)]
     [string]$keyvaultResourceId
 )
 
-function Parse-ResourceId {
-
+function Parse-ResourceId
+{
     [CmdletBinding()]
-    param (
-        [Parameter(mandatory=$true)]
-        [string]$resourceId,
-
-        [Parameter(mandatory=$false)]
-        [switch]$subscriptionId,
-
-        [Parameter(mandatory=$false)]
-        [switch]$resourceGroup,
-
-        [Parameter(mandatory=$false)]
-        [switch]$resourceName
+    param
+    (
+        [Parameter(valueFromPipeline = $true, mandatory = $true)]
+        [ValidatePattern("(/\w+/)([a-fA-F\d]{8}-([a-fA-F\d]{4}-){3}[a-fA-F\d]{12})(/\w+/)([\d\w-_]+)(/\w+/)([\w+.]+)([/\w+/)([\d\w-_]+)")]
+        [string]$resourceId
     )
 
-    $return = @{};
-
-    if ($subscriptionId)
+    try
     {
-        [string]$subscriptionId = [regex]::Match($resourceId, "[a-zA-Z0-9]{8}-([a-zA-Z0-9]{4}-){3}[a-zA-Z0-9]{12}").value;
-        $return.Add("subscriptionId", $subscriptionId);
+        $resourceId = $resourceId.ToLower();
+        $resourceHash = @{};
+
+        # subscriptionId
+        $subscriptionId = [regex]::Match($resourceId, "[a-fA-F\d]{8}-([a-fA-F\d]{4}-){3}[a-fA-F\d]{12}").value;
+        $resourceHash.Add("subscriptionId", $subscriptionId);
+
+        # resource group
+        $resourceGroup = [regex]::Match($resourceId, "resourcegroups/([\d\w-_]+)").value.replace("resourcegroups/", "");
+        $resourceHash.Add("resourceGroup", $resourceGroup);
+
+        # parent resource
+        $resourceValue = [regex]::Match($resourceid, "providers/([\w+.]+)(/\w+/)([\w-_]+)").value;
+        $resourceValue = [regex]::Replace($resourceValue, "providers/([\w+.]+)(/\w+/)", "");
+        $resourceProvider = [regex]::Match($resourceid, "providers/([\w+.]+)(/\w+/)([\w-_]+)").value;
+        $resourceProvider = [regex]::Replace($resourceProvider, "providers/([\w+.]+)/", "");
+        $resourceProvider = $resourceProvider.Substring(0, $resourceProvider.IndexOf("/"));
+        $resourceHash.Add($resourceProvider, $resourceValue);
+
+        # recurse child resources
+        $childResources = $resourceid.Substring($resourceid.IndexOf($resourceValue)).Replace("$resourceValue/", "");
+        if ([regex]::Match($childResources, "/").success -eq $true)
+        {
+            do 
+            {
+                $match = [regex]::Match($childResources, "/");
+    
+                $childResourceProvider = [regex]::Match($childResources, "([\w+-]+)/").value;
+                $childResourceProviderValue = $childResources.Replace($childResourceProvider, "");
+                $childresources = $childResourceProviderValue.Substring($childResourceProviderValue.IndexOf("/") + 1);
+    
+                if ([regex]::Match($childResourceProviderValue, "/").success -eq $true)
+                {
+                    $childResourceProviderValue = $childResourceProviderValue.Substring(0, $childResourceProviderValue.IndexOf("/"));
+                }
+    
+                $resourceHash.Add($childResourceProvider.replace("/", ""), $childResourceProviderValue);
+    
+                if ([regex]::Match($childResources, "/").success -eq $false)
+                {
+                    break;
+                }
+            }
+            while ($match.success -eq $true)
+        }
+    }
+    catch [exception]
+    {
+        Write-Error -Message "Error parsing the resourceId! $($_.exception)";
     }
 
-    if ($resourceGroup)
-    {
-        [string]$resourceGroup = [regex]::Match($resourceId, "resourceGroups/(?=\S*['-])([a-zA-Z'-]+)").value.trim("resourceGroups/");
-        $return.Add("resourceGroup", $resourceGroup);
-    }
-
-    if ($resourceName)
-    {
-        [string]$resourceName = $resourceId.Substring($resourceId.LastIndexOf("/") +1);
-        $return.Add("resourceName", $resourceName);
-    }
-
-    return $return;
-
+    return $resourceHash;
 }
 
-Import-Module Az -Force;
+# auth with arm
+$conn = Get-AutomationConnection -Name 'AzureRunAsConnection';
+Connect-AzAccount -ServicePrincipal -ApplicationId $conn.ApplicationId -CertificateThumbprint $conn.CertificateThumbprint -Tenant $conn.TenantId | Out-Null;
 
 # create certificate
 try
 {
-    $outputPath = "$env:TEMP\$($subjectNames[0]).pfx";
+    $outputPath = "$env:TEMP\$($subjectNames).pfx";
     $certStoreLocation = "cert:\LocalMachine\My";
     $cert = New-SelfSignedCertificate -DnsName $subjectNames -CertStoreLocation $certStoreLocation;
+    $pfxPassword = ConvertTo-SecureString -string $([guid]::NewGuid().Guid) -AsPlainText -Force;
     $pfx = $cert | Export-PfxCertificate -FilePath $outputPath -Password $pfxPassword -Force;
 }
 catch [exception]
 {
-    throw $_.Exception;
+    throw $_;
 }
 
-# upload to Keyvault
-if ($keyvaultResourceId)
+# get keyvault
+$vault = Parse-ResourceId -resourceId $keyvaultResourceId;
+$keyvault = Get-AzKeyVault -VaultName $vault.vaults -ResourceGroupName $vault.resourceGroup;
+
+try
 {
+    $secret = Set-AzKeyVaultSecret -VaultName $keyvault.VaultName -Name "$($pfx.name.Replace(".","-"))" -SecretValue $pfxPassword;
+}
+catch [exception]
+{
+    throw "Failed to create secret '$($pfx.name.Replace(".","-"))' in Keyvault '$($keyvault.VaultName)'. $_";
+}
+
+if ($secret)
+{
+    Write-Output "Certificate secret name:  $($secret.Name)";
+
     try
     {
-        if (!$(Get-AzContext))
-        {
-            Add-AzAccount;
-        }
-
-        $vault = Parse-ResourceId -resourceId $keyvaultResourceId -subscriptionId -resourceGroup -resourceName;
-        Select-AzSubscription -Subscription $vault.subscriptionId | Out-Null;
-    
-        $keyvault = Get-AzKeyVault -VaultName $vault.resourceName -ResourceGroupName $vault.resourceGroup;
-        $keyvault | Import-AzKeyVaultCertificate -Name $pfx.name.Replace(".","-") -Password $pfxPassword -FilePath $pfx;
-    
+        $cert = Import-AzKeyVaultCertificate -VaultName $keyvault.VaultName -Name "$($subjectNames.Replace(".","-"))" -Password $pfxPassword -FilePath $pfx;
     }
     catch [exception]
     {
         throw "Failed to import certificate to Keyvault $($_.Exception)";
     }
+
+    if ($cert)
+    {
+        Write-Output "Certificate name:  $($cert.Name)";
+        Write-Output "Certificate thumbprint:  $($cert.Thumbprint)";
+    }
+    else
+    {
+        Write-Error -Message "Error uploading cert to Keyvault '$($keyvault.VaultName)'";
+    }
 }
-else 
+else
 {
-    Write-Output "Certificate Location:  `r`n$pfx";
+    Write-Error -Message "Error creating secret in Keyvault '$($keyvault.VaultName)'";
 }
