@@ -4,13 +4,13 @@ function Get-AzVMImageData {
     [CmdletBinding()]
     param (
 
-        [Parameter(mandatory = $true)]
+        [Parameter(mandatory = $true, position = 0)]
         $location,
 
-        [Parameter(mandatory = $true)]
+        [Parameter(mandatory = $true, position = 1)]
         $publisherName,
 
-        [Parameter(mandatory = $false)]
+        [Parameter(mandatory = $false, position = 2)]
         $offerName
     )
 
@@ -53,12 +53,12 @@ function Get-AzVMImageData {
     }
 }
 
-$location = "westus2"
-$publisherName = "MicrosoftWindowsServer"
-$offerName = "WindowsServer"
+$location = "westus2";
+$publisherName = "MicrosoftWindowsServer";
+$offerName = "WindowsServer";
 
 # This will return the available offers for the given publisher
-#Get-AzVMImageData -location $location -publisher $publisherName
+#Get-AzVMImageData -location $location -publisher $publisherName;
 
 # This will return the available SKUs for the given publisher's offer
-Get-AzVMImageData -location $location -publisher $publisherName -offer $offerName
+Get-AzVMImageData -location $location -publisher $publisherName -offer $offerName;
