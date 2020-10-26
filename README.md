@@ -1,7 +1,11 @@
 # Azure PowerShell & CLI
-Useful Azure PowerShell & CLI snippets developed while working with customers in the field
+Azure PowerShell & CLI snippets developed while working with customers in the field
+
+<br>
 
 ## Add-AzDevOpsSecurityGroupMember
+Adds an array of members to an Azure DevOps security group
+
     # add members to security group
     $addMembers = @{
         azDevOpsOrgUrl    = "https://dev.azure.com/foo";
@@ -13,15 +17,20 @@ Useful Azure PowerShell & CLI snippets developed while working with customers in
             "foo@barz.com"
         );
     };
+
     Add-AzDevOpsSecurityGroupMember @addMembers;
 
 ## Enable-LogicAppDiagnostics
+Enables the diagnostic setting on the target Logic App and forwards the telemetry to the specified Log Analytics workspace
+
     $logAnalyticsResourceId = "/subscriptions/<subId>/resourcegroups/rg-telemetry/providers/microsoft.operationalinsights/workspaces/log-rohopkin";
     $logicAppResourceId = "/subscriptions/<subId>/resourceGroups/RG-LogicApp-DevOps/providers/Microsoft.Logic/workflows/HTTP-Post";
     
     Enable-LogicAppDiagnostics -logAnalyticsResourceId $logAnalyticsResourceId -logicAppResourceId $logicAppResourceId;
 
 ## Get-AzVMImageData
+Gets virutal machine image offers and SKUs available in the marketplace for the specified region 
+
     $location = "westus2";
     $publisherName = "MicrosoftWindowsServer";
     $offerName = "WindowsServer";
@@ -33,16 +42,23 @@ Useful Azure PowerShell & CLI snippets developed while working with customers in
     Get-AzVMImageData -location $location -publisher $publisherName -offer $offerName;
 
 ## Get-NextAvailableCidrBlock
+Gets the next available CIDR block for the specified VNet
+
     $vnetResourceId = "/subscriptions/<subId>/resourceGroups/RG-Network/providers/Microsoft.Network/virtualNetworks/VNET-DMZ-01";
     $cidrBlock = 26;
 
     Get-NextAvailableCidrBlock -vnetResourceId $vnetResourceId -cidrBlock $cidrBlock;
 
 ## Get-AzWebAppDeployers
+Gets the distinct deployers (ADO/VSTS, FTP, etc.) for the specified web app
+
     $appResourceId = "/subscriptions/<subId>/resourceGroups/RG-AzureFunctionDemo/providers/Microsoft.Web/sites/salmonapi";
+
     Get-AzWebAppDeployers -resourceId $appResourceId;
 
 ## New-AzDevOpsSecurityGroup
+Creates a new security group in the specified Azure DevOps project.  Use the memberArray switch to add existing members to the security group
+
     # create security group
     $newSG = @{
         azDevOpsOrgUrl           = "https://dev.azure.com/foo";
@@ -69,13 +85,15 @@ Useful Azure PowerShell & CLI snippets developed while working with customers in
     New-AzDevOpsSecurityGroup @newSG;
 
 ## New-KeyvaultSelfSignedCertificate
+Creates a self-signed certificate and adds the .PFX and password to Keyvault as certificates and secrets 
+
     $subjectNames = "myapi.foobar.net";
     $keyvaultResourceId = "/subscriptions/<subId>/resourceGroups/RG-KeyVault/providers/Microsoft.KeyVault/vaults/kv-rohopkin";
 
     New-KeyvaultSelfSignedCertificate -subjectNames $subjectNames -keyvaultResourceId $keyvaultResourceId;
 
 ## Parse-ResourceId
-resourceId parser!
+Parse the resourceId of Azure resources
 
     $resourceId = "/subscriptions/<subId>/resourceGroups/RG-KeyVault/providers/Microsoft.KeyVault/vaults/kv-rohopkin";
     $parsedId = Parse-ResourceId -resourceId $resourceId;
