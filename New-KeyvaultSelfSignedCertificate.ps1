@@ -2,13 +2,14 @@
 #Requires -Modules Az
 #Requires -RunAsAdministrator
 
-[CmdletBinding()]
 param (
+
     [Parameter(mandatory=$true)]
     [string]$subjectNames,
 
     [Parameter(mandatory=$true)]
     [string]$keyvaultResourceId
+    
 )
 
 function Parse-ResourceId
@@ -77,61 +78,76 @@ function Parse-ResourceId
     return $resourceHash;
 }
 
-# auth with arm
-$conn = Get-AutomationConnection -Name 'AzureRunAsConnection';
-Connect-AzAccount -ServicePrincipal -ApplicationId $conn.ApplicationId -CertificateThumbprint $conn.CertificateThumbprint -Tenant $conn.TenantId | Out-Null;
-
-# create certificate
-try
+function New-KeyvaultSelfSignedCertificate
 {
-    $outputPath = "$env:TEMP\$($subjectNames).pfx";
-    $certStoreLocation = "cert:\LocalMachine\My";
-    $cert = New-SelfSignedCertificate -DnsName $subjectNames -CertStoreLocation $certStoreLocation;
-    $pfxPassword = ConvertTo-SecureString -string $([guid]::NewGuid().Guid) -AsPlainText -Force;
-    $pfx = $cert | Export-PfxCertificate -FilePath $outputPath -Password $pfxPassword -Force;
-}
-catch [exception]
-{
-    throw $_;
-}
 
-# get keyvault
-$vault = Parse-ResourceId -resourceId $keyvaultResourceId;
-$keyvault = Get-AzKeyVault -VaultName $vault.vaults -ResourceGroupName $vault.resourceGroup;
-
-try
-{
-    $secret = Set-AzKeyVaultSecret -VaultName $keyvault.VaultName -Name "$($pfx.name.Replace(".","-"))" -SecretValue $pfxPassword;
-}
-catch [exception]
-{
-    throw "Failed to create secret '$($pfx.name.Replace(".","-"))' in Keyvault '$($keyvault.VaultName)'. $_";
-}
-
-if ($secret)
-{
-    Write-Output "Certificate secret name:  $($secret.Name)";
-
+    [CmdletBinding()]
+    param (
+        [Parameter(mandatory=$true)]
+        [string]$subjectNames,
+    
+        [Parameter(mandatory=$true)]
+        [string]$keyvaultResourceId
+    )
+    
+    # auth with arm
+    $conn = Get-AutomationConnection -Name 'AzureRunAsConnection';
+    Connect-AzAccount -ServicePrincipal -ApplicationId $conn.ApplicationId -CertificateThumbprint $conn.CertificateThumbprint -Tenant $conn.TenantId | Out-Null;
+    
+    # create certificate
     try
     {
-        $cert = Import-AzKeyVaultCertificate -VaultName $keyvault.VaultName -Name "$($subjectNames.Replace(".","-"))" -Password $pfxPassword -FilePath $pfx;
+        $outputPath = "$env:TEMP\$($subjectNames).pfx";
+        $certStoreLocation = "cert:\LocalMachine\My";
+        $cert = New-SelfSignedCertificate -DnsName $subjectNames -CertStoreLocation $certStoreLocation;
+        $pfxPassword = ConvertTo-SecureString -string $([guid]::NewGuid().Guid) -AsPlainText -Force;
+        $pfx = $cert | Export-PfxCertificate -FilePath $outputPath -Password $pfxPassword -Force;
     }
     catch [exception]
     {
-        throw "Failed to import certificate to Keyvault $($_.Exception)";
+        throw $_;
     }
-
-    if ($cert)
+    
+    # get keyvault
+    $vault = Parse-ResourceId -resourceId $keyvaultResourceId;
+    $keyvault = Get-AzKeyVault -VaultName $vault.vaults -ResourceGroupName $vault.resourceGroup;
+    
+    try
     {
-        Write-Output "Certificate name:  $($cert.Name)";
-        Write-Output "Certificate thumbprint:  $($cert.Thumbprint)";
+        $secret = Set-AzKeyVaultSecret -VaultName $keyvault.VaultName -Name "$($pfx.name.Replace(".","-"))" -SecretValue $pfxPassword;
+    }
+    catch [exception]
+    {
+        throw "Failed to create secret '$($pfx.name.Replace(".","-"))' in Keyvault '$($keyvault.VaultName)'. $_";
+    }
+    
+    if ($secret)
+    {
+        Write-Output "Certificate secret name:  $($secret.Name)";
+    
+        try
+        {
+            $cert = Import-AzKeyVaultCertificate -VaultName $keyvault.VaultName -Name "$($subjectNames.Replace(".","-"))" -Password $pfxPassword -FilePath $pfx;
+        }
+        catch [exception]
+        {
+            throw "Failed to import certificate to Keyvault $($_.Exception)";
+        }
+    
+        if ($cert)
+        {
+            Write-Output "Certificate name:  $($cert.Name)";
+            Write-Output "Certificate thumbprint:  $($cert.Thumbprint)";
+        }
+        else
+        {
+            Write-Error -Message "Error uploading cert to Keyvault '$($keyvault.VaultName)'";
+        }
     }
     else
     {
-        Write-Error -Message "Error uploading cert to Keyvault '$($keyvault.VaultName)'";
+        Write-Error -Message "Error creating secret in Keyvault '$($keyvault.VaultName)'";
     }
 }
-else
-{
-    Write-Error -Message "Error creating secret in Keyvault '$($keyvault.VaultName)'";
-}
+
+New-KeyvaultSelfSignedCertificate -subjectNames $subjectNames -keyvaultResourceId $keyvaultResourceId;

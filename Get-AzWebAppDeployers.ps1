@@ -13,17 +13,14 @@ function Get-AzCachedAccessToken()
         Import-Module Az.Accounts;
     }
 
-    $azProfile = [Microsoft.Azure.Commands.Common.Authentication.Abstractions.AzureRmProfileProvider]::Instance.Profile;
-
-    if(!$azProfile.Accounts)
+    if (!$(Get-AzContext))
     {
-        Write-Error "Ensure you have logged in before calling this function.";
+        Add-AzAccount;
     }
-  
-    $profileClient = [Microsoft.Azure.Commands.ResourceManager.Common.RMProfileClient]::New($azProfile);
 
+    $azProfile = [Microsoft.Azure.Commands.Common.Authentication.Abstractions.AzureRmProfileProvider]::Instance.Profile;  
+    $profileClient = [Microsoft.Azure.Commands.ResourceManager.Common.RMProfileClient]::New($azProfile);
     $context = Get-AzContext;
-    Write-Debug ("Getting access token for tenant" + $context.Tenant.TenantId);
     $token = $profileClient.AcquireAccessToken($context.Tenant.TenantId);
     
     return $('Bearer {0}' -f $($token.AccessToken));

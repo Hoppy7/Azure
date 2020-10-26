@@ -97,6 +97,6 @@ resourceId parser!
 
     Name                           Value
     ----                           -----
-    subscriptionId                 0aba2ef8-fd83-4066-abf0-8f5be9c9ad8c
+    subscriptionId                 00000000-0000-0000-0000-000000000000
     sites                          salmonapi
     resourceGroup                  rg-azurefunctiondemo

@@ -1,3 +1,24 @@
+param
+(
+    [Parameter(mandatory = $true)]
+    [string]$azDevOpsOrgUrl,
+
+    [Parameter(mandatory = $true)]
+    [string]$azDevOpsProject,
+
+    [Parameter(mandatory = $true)]
+    [string]$azDevOpsPAT,
+
+    [Parameter(mandatory = $true)]
+    [string]$securityGroupName,
+
+    [Parameter(mandatory = $true)]
+    [string]$securityGroupDescription,
+
+    [Parameter(mandatory = $false)]
+    [array]$memberArray
+)
+
 function New-AzDevOpsSecurityGroup 
 {
     [CmdletBinding()]
@@ -64,27 +85,28 @@ function New-AzDevOpsSecurityGroup
     }
 }
 
-# create security group
-$newSG = @{
-    azDevOpsOrgUrl           = "https://dev.azure.com/foo";
-    azDevOpsProject          = "bar";
-    azDevOpsPAT              = "<personal_access_token>";
-    securityGroupName        = "Foo Bar";
-    securityGroupDescription = "Foo bar description can go here";
-};
-New-AzDevOpsSecurityGroup @newSG;
+if (!$memberArray)
+{
+    # create security group
+    $newSG = @{
+        azDevOpsOrgUrl           = $azDevOpsOrgUrl;
+        azDevOpsProject          = $azDevOpsProject;
+        azDevOpsPAT              = $azDevOpsPAT;
+        securityGroupName        = $securityGroupName;
+        securityGroupDescription = $securityGroupDescription;
+    };
+}
+else
+{
+    # create security group and add members
+    $newSG = @{
+        azDevOpsOrgUrl           = $azDevOpsOrgUrl;
+        azDevOpsProject          = $azDevOpsProject;
+        azDevOpsPAT              = $azDevOpsPAT;
+        securityGroupName        = $securityGroupName;
+        securityGroupDescription = $securityGroupDescription;
+        memberArray              = $memberArray;
+    };
+}
 
-
-# create security group and add members
-$newSG = @{
-    azDevOpsOrgUrl           = "https://dev.azure.com/foo";
-    azDevOpsProject          = "bar";
-    azDevOpsPAT              = "<personal_access_token>";
-    securityGroupName        = "Foo Bar2";
-    securityGroupDescription = "Foo bar description can go here";
-    memberArray              = @(
-        "foo@bar.com",
-        "foo@barz.com"
-    );
-};
 New-AzDevOpsSecurityGroup @newSG;

@@ -53,12 +53,4 @@ function Get-AzVMImageData {
     }
 }
 
-$location = "westus2";
-$publisherName = "MicrosoftWindowsServer";
-$offerName = "WindowsServer";
-
-# This will return the available offers for the given publisher
-#Get-AzVMImageData -location $location -publisher $publisherName;
-
-# This will return the available SKUs for the given publisher's offer
 Get-AzVMImageData -location $location -publisher $publisherName -offer $offerName;

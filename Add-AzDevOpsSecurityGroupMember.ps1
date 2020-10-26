@@ -58,13 +58,11 @@ function Add-AzDevOpsSecurityGroupMember
 
 # add members to security group
 $addMembers = @{
-    azDevOpsOrgUrl    = "https://dev.azure.com/foo";
-    azDevOpsProject   = "bar";
-    azDevOpsPAT       = "<personal_access_token>";
-    securityGroupName = "Foo Bar SG";
-    memberArray       = @(
-        "foo@bar.com",
-        "foo@barz.com"
-    );
+    azDevOpsOrgUrl           = $azDevOpsOrgUrl;
+    azDevOpsProject          = $azDevOpsProject;
+    azDevOpsPAT              = $azDevOpsPAT;
+    securityGroupName        = $securityGroupName;
+    memberArray              = $memberArray;
 };
+
 Add-AzDevOpsSecurityGroupMember @addMembers;
