@@ -1,5 +1,5 @@
 # Azure PowerShell & CLI
-Azure PowerShell & CLI snippets developed while working with customers in the field
+Azure PowerShell & CLI scripts developed while working with customers in the field
 
 <br>
 
