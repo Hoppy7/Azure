@@ -23,8 +23,8 @@ Adds an array of members to an Azure DevOps security group
 ## Enable-LogicAppDiagnostics
 Enables the diagnostic setting on the target Logic App and forwards the telemetry to the specified Log Analytics workspace
 
-    $logAnalyticsResourceId = "/subscriptions/<subId>/resourcegroups/rg-telemetry/providers/microsoft.operationalinsights/workspaces/log-rohopkin";
-    $logicAppResourceId = "/subscriptions/<subId>/resourceGroups/RG-LogicApp-DevOps/providers/Microsoft.Logic/workflows/HTTP-Post";
+    $logAnalyticsResourceId = "/subscriptions/00000000-0000-0000-0000-000000000000/resourcegroups/rg-telemetry/providers/microsoft.operationalinsights/workspaces/log-rohopkin";
+    $logicAppResourceId = "/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/RG-LogicApp-DevOps/providers/Microsoft.Logic/workflows/HTTP-Post";
     
     Enable-LogicAppDiagnostics -logAnalyticsResourceId $logAnalyticsResourceId -logicAppResourceId $logicAppResourceId;
 
@@ -44,7 +44,7 @@ Gets virutal machine image offers and SKUs available in the marketplace for the 
 ## Get-NextAvailableCidrBlock
 Gets the next available CIDR block for the specified VNet
 
-    $vnetResourceId = "/subscriptions/<subId>/resourceGroups/RG-Network/providers/Microsoft.Network/virtualNetworks/VNET-DMZ-01";
+    $vnetResourceId = "/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/RG-Network/providers/Microsoft.Network/virtualNetworks/VNET-DMZ-01";
     $cidrBlock = 26;
 
     Get-NextAvailableCidrBlock -vnetResourceId $vnetResourceId -cidrBlock $cidrBlock;
@@ -52,7 +52,7 @@ Gets the next available CIDR block for the specified VNet
 ## Get-AzWebAppDeployers
 Gets the distinct deployers (ADO/VSTS, FTP, etc.) for the specified web app
 
-    $appResourceId = "/subscriptions/<subId>/resourceGroups/RG-AzureFunctionDemo/providers/Microsoft.Web/sites/salmonapi";
+    $appResourceId = "/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/RG-AzureFunctionDemo/providers/Microsoft.Web/sites/salmonapi";
 
     Get-AzWebAppDeployers -resourceId $appResourceId;
 
@@ -88,14 +88,14 @@ Creates a new security group in the specified Azure DevOps project.  Use the mem
 Creates a self-signed certificate and adds the .PFX and password to Keyvault as certificates and secrets 
 
     $subjectNames = "myapi.foobar.net";
-    $keyvaultResourceId = "/subscriptions/<subId>/resourceGroups/RG-KeyVault/providers/Microsoft.KeyVault/vaults/kv-rohopkin";
+    $keyvaultResourceId = "/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/RG-KeyVault/providers/Microsoft.KeyVault/vaults/kv-rohopkin";
 
     New-KeyvaultSelfSignedCertificate -subjectNames $subjectNames -keyvaultResourceId $keyvaultResourceId;
 
 ## Parse-ResourceId
 Parse the resourceId of Azure resources
 
-    $resourceId = "/subscriptions/<subId>/resourceGroups/RG-KeyVault/providers/Microsoft.KeyVault/vaults/kv-rohopkin";
+    $resourceId = "/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/RG-KeyVault/providers/Microsoft.KeyVault/vaults/kv-rohopkin";
     $parsedId = Parse-ResourceId -resourceId $resourceId;
 
     $parsedId;
@@ -108,7 +108,7 @@ Parse the resourceId of Azure resources
 
     .........
 
-    $resourceId = "/subscriptions/<subId>/resourceGroups/RG-AzureFunctionDemo/providers/Microsoft.Web/sites/salmonapi";
+    $resourceId = "/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/RG-AzureFunctionDemo/providers/Microsoft.Web/sites/salmonapi";
     $parsedId = Parse-ResourceId -resourceId $resourceId;
 
     $parsedId;
