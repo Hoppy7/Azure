@@ -124,4 +124,5 @@ Resize an Azure virtual machine
 
     $vmResourceId = "/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/RG-DEVELOPMENT/providers/Microsoft.Compute/virtualMachines/vmdev01";
     $newVmSize = "Standard_DS5_v2";
+
     Update-AzVmSize -vmResourceId $vmResourceId -newVmSize $newVmSize;
