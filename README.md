@@ -41,7 +41,7 @@ Gets virutal machine image offers and SKUs available in the marketplace for the 
     # This will return the available SKUs for the given publisher's offer
     Get-AzVMImageData -location $location -publisher $publisherName -offer $offerName;
 
-## Get-NextAvailableCidrBlock
+## Get-AzVnetNextAvailableCidrBlock
 Gets the next available CIDR block for the specified VNet
 
     $vnetResourceId = "/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/RG-Network/providers/Microsoft.Network/virtualNetworks/VNET-DMZ-01";
