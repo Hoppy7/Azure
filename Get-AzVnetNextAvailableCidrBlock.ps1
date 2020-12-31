@@ -85,18 +85,7 @@ function Get-CidrRange
         [string]$cidrBlock
     )
 
-    class cidrObject
-    {
-        [int]$cidr
-        [ipaddress]$inputIP
-        [ipaddress]$cidrStartIP
-        [ipaddress]$cidrEndIP
-        [ipaddress]$subnetMask
-        [version]$inputIpToVersion
-        [version]$cidrStartIpToVersion
-        [version]$cidrEndIpToVersion
-    }
-
+    # define ip and cidr
     $ip = $cidrBlock.Split("/")[0];
     $cidr = $cidrBlock.Split("/")[1];
 
@@ -113,13 +102,17 @@ function Get-CidrRange
     # get subnet mask
     try
     {
+        # convert cidr to int
         $cidrToInt = [convert]::ToInt64($("1" * $cidr + "0" * $(32 - $cidr)), 2);
-        $subnetMask = [version]::New(
-            $([math]::Truncate($cidrToInt / 16777216)).ToString(),
-            $([math]::Truncate($($cidrToInt % 16777216) / 65536)).ToString(),
-            $([math]::Truncate($($cidrToInt % 65536) / 256)).ToString(),
-            $([math]::Truncate($cidrToInt % 256)).ToString()
-        );
+
+        # define octets
+        $octetOne = $([math]::Truncate($cidrToInt / 16777216)).ToString();
+        $octetTwo = $([math]::Truncate($($cidrToInt % 16777216) / 65536)).ToString();
+        $octetThree = $([math]::Truncate($($cidrToInt % 65536) / 256)).ToString();
+        $octetFour = $([math]::Truncate($cidrToInt % 256)).ToString();
+
+        # get subnet mask
+        $subnetMask = [version]::New($octetOne, $octetTwo, $octetThree, $octetFour);
         $subnetMask = [ipaddress]::Parse($subnetMask.ToString());
     }
     catch [exception]
@@ -138,11 +131,17 @@ function Get-CidrRange
         Write-Error -Message "Unable to determine the address range for cidr: $cidrBlock $_" -ErrorAction Stop;
     }
 
+    class cidrObject
+    {
+        [int]$cidr
+        [ipaddress]$subnetMask
+        [version]$inputIpToVersion
+        [version]$cidrStartIpToVersion
+        [version]$cidrEndIpToVersion
+    }
+
     $cidrObj = [cidrObject]::new();
         $cidrObj.cidr                 = $cidr;
-        $cidrObj.inputIP              = $ip;
-        $cidrObj.cidrStartIP          = $startIP;
-        $cidrObj.cidrEndIP            = $endIP;
         $cidrObj.subnetMask           = $subnetMask;
         $cidrObj.inputIpToVersion     = [version]$ip.IPAddressToString;
         $cidrObj.cidrStartIpToVersion = [version]$startIP.IPAddressToString;
@@ -151,7 +150,58 @@ function Get-CidrRange
     return $cidrObj;
 }
 
-function Get-NextAvailableCidrBlock
+function New-IncrementalCidrIP
+{
+    [CmdletBinding()]
+    param
+    (
+        [Parameter(Mandatory=$true)]
+        [object]$lastSubnetCidr
+    )
+    
+    # octet to version mapping
+    $octetVersionMapping = @{};
+    $octetVersionMapping.Add(1, "Major");
+    $octetVersionMapping.Add(2, "Minor");
+    $octetVersionMapping.Add(3, "Build");
+    $octetVersionMapping.Add(4, "Revision");
+
+    # determine which octet to increment
+    [array]$fullOctets = $($lastSubnetCidr.cidrEndIpToVersion.psobject.properties | ? {$_.value -eq 255 -and $_.name -notin @("MajorRevision", "MinorRevision")}).Name;
+
+    for ($i = 4; $i -ge 1; $i--)
+    {
+        if ($octetVersionMapping[$i] -notin $fullOctets)
+        {
+            $octetToIncrement = $octetVersionMapping[$i];
+            break;
+        }
+    }
+    
+    # create the new subnet's starting ip address
+    if ($octetToIncrement -eq "Major")
+    {
+        $newSubnetIP = [version]::new($lastSubnetCidr.cidrEndIpToVersion.Major + 1, 0, 0, 0).ToString();
+    }
+    elseif ($octetToIncrement -eq "Minor")
+    {
+        $newSubnetIP = [version]::new($lastSubnetCidr.cidrEndIpToVersion.Major, $lastSubnetCidr.cidrEndIpToVersion.Minor + 1, 0, 0).ToString();
+
+    }
+    elseif ($octetToIncrement -eq "Build")
+    {
+        $newSubnetIP = [version]::new($lastSubnetCidr.cidrEndIpToVersion.Major, $lastSubnetCidr.cidrEndIpToVersion.Minor, $lastSubnetCidr.cidrEndIpToVersion.Build + 1, 0).ToString();
+
+    }
+    elseif ($octetToIncrement -eq "Revision")
+    {
+        $newSubnetIP = [version]::new($lastSubnetCidr.cidrEndIpToVersion.Major, $lastSubnetCidr.cidrEndIpToVersion.Minor, $lastSubnetCidr.cidrEndIpToVersion.Build, $lastSubnetCidr.cidrEndIpToVersion.Revision + 1).ToString();
+    }
+
+    return $newSubnetIP;
+}
+
+function Get-AzVnetNextAvailableCidrBlock
 {
     [CmdletBinding()]
     param
@@ -163,11 +213,13 @@ function Get-NextAvailableCidrBlock
         [int]$cidrBlock
     )
 
+    # auth
     if (!$(Get-AzContext))
     {
         Add-AzAccount;
     }
 
+    # parse vnet resourceId
     $vnetParse = Parse-ResourceId($vnetResourceId);
 
     # check subscription context
@@ -187,18 +239,25 @@ function Get-NextAvailableCidrBlock
     try
     {
         $vnet = Get-AzVirtualNetwork -Name $vnetParse.virtualnetworks -ResourceGroupName $vnetParse.resourceGroup;
-        # TODO:  Add logic for additional address spaces
-        $vnetAddressSpace = $vnet.AddressSpace.AddressPrefixes[0];
     }
     catch [exception]
     {
-        Write-Error -Message "Unable to list the target virtual network.  Validate the resourceId is correct and you have permissions on the subscription:  $vnetResourceId" -ErrorAction Stop;
+        Write-Error -Message "Unable to list the target virtual network.  Validate the resourceId is correct and you have permissions on the subscription: $vnetResourceId" -ErrorAction Stop;
     }
+
+    # TODO:  Add logic for additional vnet address spaces
+    $vnetAddressSpace = $vnet.AddressSpace.AddressPrefixes[0];
 
     # subnets exist 
     if ($vnet.Subnets)
     {
-        # determine target last subnet in vnet range
+        # determine if the new subnet can fit in the vnet
+        if ($cidrBlock -le $vnetAddressSpace.Substring($vnetAddressSpace.LastIndexOf("/") + 1))
+        {
+            Write-Error "There is not enough address space available to allocate a /$cidrBlock subnet in vnet: $vnetAddressSpace" -ErrorAction Stop;
+        }
+
+        # determine the target last subnet in vnet range
         $sortedSubnets = $vnet.Subnets.addressprefix | Sort-Object -Property {[Version]$([regex]::Replace($_, "/\d+", ""))};
 
         if ($sortedSubnets.count -eq 1)
@@ -209,74 +268,44 @@ function Get-NextAvailableCidrBlock
         {
             $lastSubnet = $sortedSubnets[$sortedSubnets.count - 1];
         }
-    
+
         # get subnet address range
-        $subnetCidr = Get-CidrRange -cidr $lastSubnet;
-    
-        # new subnet on 4th octet
-        if ($subnetCidr.cidrEndIpToVersion.Revision -ne 255)
+        $newSubnetIP = Get-CidrRange -cidr $lastSubnet;
+
+        # recurse and determine the new cidr block
+        do
         {
-            $newSubnetIP = [version]::new($subnetCidr.cidrEndIpToVersion.Major, $subnetCidr.cidrEndIpToVersion.Minor, $subnetCidr.cidrEndIpToVersion.Build, $subnetCidr.cidrEndIpToVersion.Revision + 1).ToString();
+            # create a new incremented ip adress for the start of the new subnet, & get the new subnet's cidr range
+            $newSubnetIP = New-IncrementalCidrIP -lastSubnetCidr $newSubnetIP;
             $newSubnetCidr = Get-CidrRange -cidr $($newSubnetIP.ToString() + "/" + $cidrBlock);
-            
+
+            # new ip is the starting ip address of the cidr range
+            # return cidr block
             if ($newSubnetCidr.inputIpToVersion -eq $newSubnetCidr.cidrStartIpToVersion)
             {
                 $newCidrBlock = $($newSubnetIP.ToString() + "/" + $cidrBlock);
 
                 return $newCidrBlock;
             }
-            # # new subnet on 3rd octet when not enough space on current 4th octet
+            # set the next run to start at $newSubnetCidr
             else
             {
-                $newStartIP = [version]::new($subnetCidr.cidrEndIpToVersion.Major, $subnetCidr.cidrEndIpToVersion.Minor, $($subnetCidr.cidrEndIpToVersion.Build + 1), 0);
-                $newCidr = Get-CidrRange -cidr $($newStartIP.ToString() + "/" + $cidrBlock);
-    
-                if ($newCidr.inputIpToVersion -eq $newCidr.cidrStartIpToVersion)
-                {
-                    $newCidrBlock = $($newCidr.inputIP.IPAddressToString + "/" + $cidrBlock);
- 
-                    return $newCidrBlock;
-                }
+                $newSubnetIP = $newSubnetCidr;
             }
         }
-        # new subnet on 3rd octet
-        elseif ($subnetCidr.cidrEndIpToVersion.Revision -eq 255)
-        {
-            $newStartIP = [version]::new($subnetCidr.cidrEndIpToVersion.Major, $subnetCidr.cidrEndIpToVersion.Minor, $($subnetCidr.cidrEndIpToVersion.Build + 1), 0);
-            $newCidrBlock = $($newStartIP.ToString() + "/" + $cidrBlock);
-
-            # get the vnet address range
-            $vnetCidr = Get-CidrRange -cidrBlock $vnetAddressSpace;
-
-            # get subnet address range
-            $subnetCidr = Get-CidrRange -cidr $newCidrBlock;
-
-            if ($subnetCidr.cidrStartIpToVersion -ge $vnetCidr.cidrStartIpToVersion -and $subnetCidr.cidrEndIpToVersion -le $vnetCidr.cidrEndIpToVersion)
-            {
-                return $newCidrBlock;
-            }
-            else
-            {
-                Write-Error "There is not enough address space to allocate for subnet: $newCidrBlock in vnet: $vnetAddressSpace" -ErrorAction Stop;
-            }
-        }
-        else 
-        {
-            throw "Unhandled error";
-        }
-    }
+        while ($newSubnetCidr.inputIpToVersion -ne $newSubnetCidr.cidrStartIpToVersion)
+    }    
     # no subnets exist
-    else
+    else     
     {
         $vnetCidr = $vnetAddressSpace.Substring($vnetAddressSpace.IndexOf("/") + 1);
-        
+    
         if ($cidrblock -ge $vnetCidr)
         {
             $newSubnetCidr = $($vnetAddressSpace.Substring(0, $vnetAddressSpace.IndexOf("/")) + "/" + $cidrBlock);
-
             return $newSubnetCidr;
         }
     }
 }
 
-Get-NextAvailableCidrBlock -vnetResourceId $vnetResourceId -cidrBlock $cidrBlock;
+Get-AzVnetNextAvailableCidrBlock -vnetResourceId $vnetResourceId -cidrBlock $cidrBlock;
