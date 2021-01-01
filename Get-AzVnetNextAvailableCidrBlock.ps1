@@ -286,14 +286,12 @@ function Get-AzVnetNextAvailableCidrBlock
                 $newSubnetCidr.cidrEndIpToVersion -le $vnetCidrRange.cidrEndIpToVersion)
             {
                 $newCidrBlock = $($newSubnetIP.ToString() + "/" + $cidrBlock);
-
                 return $newCidrBlock;
             }
             # vnet's ip range is full
             elseif ($newSubnetCidr.cidrEndIpToVersion -gt $vnetCidrRange.cidrEndIpToVersion)
             {
                 Write-Error "There is not enough address space available to allocate a new /$cidrBlock subnet in vnet: $vnetAddressSpace" -ErrorAction Stop;
-
             }
             # set the next run to start at $newSubnetCidr
             else
