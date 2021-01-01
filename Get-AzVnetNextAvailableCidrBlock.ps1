@@ -247,6 +247,7 @@ function Get-AzVnetNextAvailableCidrBlock
 
     # TODO:  Add logic for additional vnet address spaces
     $vnetAddressSpace = $vnet.AddressSpace.AddressPrefixes[0];
+    $vnetCidrRange = Get-CidrRange -cidr $vnetAddressSpace;
 
     # subnets exist 
     if ($vnet.Subnets)
@@ -254,7 +255,7 @@ function Get-AzVnetNextAvailableCidrBlock
         # determine if the new subnet can fit in the vnet
         if ($cidrBlock -le $vnetAddressSpace.Substring($vnetAddressSpace.LastIndexOf("/") + 1))
         {
-            Write-Error "There is not enough address space available to allocate a /$cidrBlock subnet in vnet: $vnetAddressSpace" -ErrorAction Stop;
+            Write-Error "There is not enough address space available to allocate a new /$cidrBlock subnet in vnet: $vnetAddressSpace" -ErrorAction Stop;
         }
 
         # determine the target last subnet in vnet range
@@ -279,13 +280,20 @@ function Get-AzVnetNextAvailableCidrBlock
             $newSubnetIP = New-IncrementalCidrIP -lastSubnetCidr $newSubnetIP;
             $newSubnetCidr = Get-CidrRange -cidr $($newSubnetIP.ToString() + "/" + $cidrBlock);
 
-            # new ip is the starting ip address of the cidr range
+            # new ip is the starting ip address of the cidr range and fits in vnet address range
             # return cidr block
-            if ($newSubnetCidr.inputIpToVersion -eq $newSubnetCidr.cidrStartIpToVersion)
+            if ($newSubnetCidr.inputIpToVersion -eq $newSubnetCidr.cidrStartIpToVersion -and
+                $newSubnetCidr.cidrEndIpToVersion -le $vnetCidrRange.cidrEndIpToVersion)
             {
                 $newCidrBlock = $($newSubnetIP.ToString() + "/" + $cidrBlock);
 
                 return $newCidrBlock;
+            }
+            # vnet's ip range is full
+            elseif ($newSubnetCidr.cidrEndIpToVersion -gt $vnetCidrRange.cidrEndIpToVersion)
+            {
+                Write-Error "There is not enough address space available to allocate a new /$cidrBlock subnet in vnet: $vnetAddressSpace" -ErrorAction Stop;
+
             }
             # set the next run to start at $newSubnetCidr
             else
