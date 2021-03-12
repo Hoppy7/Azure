@@ -84,6 +84,18 @@ Creates a new security group in the specified Azure DevOps project.  Use the mem
     };
     New-AzDevOpsSecurityGroup @newSG;
 
+## New-AzDevOpsServiceConnection
+A very simple example to create a Veracode Service Connection in the target ADO project.
+
+    $serviceConnName = "VeracodeSample"
+    $vercodeApiId    = "88b73ca2-ee8f-4719-93a9-71b65ecaca8c"
+    $veracodeApiKey  = "inh34ih5lfw7xsxm4lmeliqodfnjsrgfdslkfseawaerd2a"
+    $orgName         = "hoppy7"
+    $projectName     = "Azure"
+    $patToken        = "fnhskfghsufmsd;lfksd;fjsfbhdsfjsdlfknslmgfmngdgdfsgvs"
+    
+    New-AzDevOpsServiceConnection -serviceConnName $serviceConnName -vercodeApiId $vercodeApiId -veracodeApiKey $veracodeApiKey -orgName $orgName -projectName $projectName -token $patToken;
+
 ## New-KeyvaultSelfSignedCertificate
 Creates a self-signed certificate and adds the .PFX and password to Keyvault as certificates and secrets 
 
