@@ -131,6 +131,11 @@ Parse the resourceId of Azure resources
     sites                          salmonapi
     resourceGroup                  rg-azurefunctiondemo
 
+## Recover-AzDeletedStorageAccount
+Lists storage accounts recently deleted within the past 14 days for the provided subscriptionId, and recovers the accounts inluding the data.
+
+    Recover-AzDeletedStorageAccounts -subscriptionId "00000000-0000-0000-0000-000000000000"
+
 ## Update-AzVmSize 
 Resize an Azure virtual machine
 
